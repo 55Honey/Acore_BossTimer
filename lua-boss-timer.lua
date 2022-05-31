@@ -48,7 +48,6 @@ MaxPlayers[409] = 25
 -- NO ADJUSTMENTS REQUIRED BELOW THIS LINE
 ------------------------------------------
 local CREATURE_EVENT_ON_ADD = 36            -- (event, creature)
-local PLAYER_EVENT_ON_KILL_CREATURE  = 7    -- (event, killer, killed)
 
 local MapArray = {}                     -- mapId of the instance
 local PlayerArray = newAutotable(2)	    -- players per instance[InstanceId][Player#] = player GUID (Limit: 40)
@@ -81,30 +80,10 @@ local function SaveInstanceToDB(instanceId)
     --todo: save stuff in containers to Eluna table
 end
 
-local function PlayerKilled(event, killer, killed)
-    if not killed:IsDungeonBoss() then
-        return
-    end
-    local bossEntry = killed:GetEntry()
-    local mapId = killed:GetMapId()
-    local bossIndex = GetIndex(BossArray[mapId],bossEntry)
-    if bossIndex ~= false then
-        local player = killer:GetNearestPlayer(100,2) -- Get closest friendly player
-        local group = player:GetGroup()
-        local groupPlayers = group:GetMembers()
-        for _,val in pairs(groupPlayers) do
-            local playerGUID = val:GetGUID()
-            if not HasValue(PlayerArray[instanceId],playerGUID) and #PlayerArray[instanceId] <= MaxPlayers[mapId] then
-                table.insert(PlayerArray[instanceId],playerGUID)
-            end
-        end
-    end
-end
-
 local function CheckBosses(eventid, delay, repeats, worldobject)
     local mapId = worldobject:GetMapId()
-    for _,val in pairs(BossArray[mapId]) do
-        local boss = worldobject:GetNearestCreature(5000,val)
+    for _,bval in pairs(BossArray[mapId]) do
+        local boss = worldobject:GetNearestCreature(5000,bval)
         if boss then
             if not boss:IsDead() then
                 local bossId = GetIndex(BossArray[mapId],boss:GetEntry())
@@ -119,6 +98,16 @@ local function CheckBosses(eventid, delay, repeats, worldobject)
                 end
             elseif StartTimerArray[instanceId][bossId] then
                 StopTimerArray[instance][bossId] = os.time
+
+                local player = worldobject:GetNearestPlayer(5000) -- Get closest player
+                local group = player:GetGroup()
+                local groupPlayers = group:GetMembers()
+                for _,pval in pairs(groupPlayers) do
+                    local playerGUID = pval:GetGUIDLow()
+                    if not HasValue(PlayerArray[instanceId],playerGUID) and #PlayerArray[instanceId] <= MaxPlayers[mapId] then
+                        table.insert(PlayerArray[instanceId],playerGUID)
+                    end
+                end
             end
         end
     end
@@ -130,7 +119,6 @@ end
 
 local function Init()
     RegisterCreatureEvent(Config.DummyEntry,CREATURE_EVENT_ON_ADD,DummyAdded)
-    RegisterPlayerEvent(PLAYER_EVENT_ON_KILL_CREATURE,PlayerKilled)
     LoadInstancesFromDb()
 
     WorldDBQuery('CREATE DATABASE IF NOT EXISTS `'..Config.customDbName..'`;')
