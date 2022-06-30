@@ -9,7 +9,7 @@
 -- requires ElunaLua module
 
 
--- This module spawns (custom) NPCs and grants them scripted combat abilities
+-- This script serves to log player performance for future use, e.g. website display.
 ------------------------------------------------------------------------------------------------
 -- ADMIN GUIDE:  -  compile the core with ElunaLua module
 --               -  adjust config in this file
